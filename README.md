@@ -32,9 +32,9 @@ Install the app for your GitHub user account.
 Then run with environment variables:
 
 ```bash
-export GITHUB_APP_CLIENT_ID=your_client_id
-export GITHUB_APP_CLIENT_SECRET=your_client_secret
-export GITHUB_APP_INSTALL_URL=https://github.com/apps/your-app-slug/installations/new
+export APP_CLIENT_ID=your_client_id
+export APP_CLIENT_SECRET=your_client_secret
+export APP_INSTALL_URL=https://github.com/apps/your-app-slug/installations/new
 make dev
 ```
 

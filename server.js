@@ -10,9 +10,9 @@ const app = express();
 const ROOT_DIR = __dirname;
 const PORT = Number(process.env.PORT || 8080);
 
-const GITHUB_APP_CLIENT_ID = (process.env.GITHUB_APP_CLIENT_ID || '').trim();
-const GITHUB_APP_CLIENT_SECRET = (process.env.GITHUB_APP_CLIENT_SECRET || '').trim();
-const GITHUB_APP_INSTALL_URL = normalizeInstallUrl((process.env.GITHUB_APP_INSTALL_URL || '').trim());
+const APP_CLIENT_ID = (process.env.APP_CLIENT_ID || '').trim();
+const APP_CLIENT_SECRET = (process.env.APP_CLIENT_SECRET || '').trim();
+const APP_INSTALL_URL = normalizeInstallUrl((process.env.APP_INSTALL_URL || '').trim());
 
 const OAUTH_STATE_COOKIE = 'gh_oauth_state';
 const OAUTH_RETURN_COOKIE = 'gh_oauth_return';
@@ -130,9 +130,9 @@ function clearCookie(res, name) {
 }
 
 function requireGitHubAppConfig(res) {
-  if (!GITHUB_APP_CLIENT_ID || !GITHUB_APP_CLIENT_SECRET) {
+  if (!APP_CLIENT_ID || !APP_CLIENT_SECRET) {
     res.status(500).json({
-      error: 'GitHub App auth is not configured. Set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET.'
+      error: 'GitHub App auth is not configured. Set APP_CLIENT_ID and APP_CLIENT_SECRET.'
     });
     return false;
   }
@@ -459,7 +459,7 @@ app.get('/auth/github/start', (req, res) => {
   setCookie(res, OAUTH_RETURN_COOKIE, returnTo, { secure: process.env.NODE_ENV === 'production', maxAge: 600 });
 
   const authUrl = new URL('https://github.com/login/oauth/authorize');
-  authUrl.searchParams.set('client_id', GITHUB_APP_CLIENT_ID);
+  authUrl.searchParams.set('client_id', APP_CLIENT_ID);
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('allow_signup', 'true');
 
@@ -495,8 +495,8 @@ app.get('/auth/github/callback', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        client_id: GITHUB_APP_CLIENT_ID,
-        client_secret: GITHUB_APP_CLIENT_SECRET,
+        client_id: APP_CLIENT_ID,
+        client_secret: APP_CLIENT_SECRET,
         code,
         state
       })
@@ -547,7 +547,7 @@ app.get('/api/github/me', async (req, res) => {
       githubApp: {
         installed: Boolean(chosenInstallation),
         installationId: chosenInstallation ? chosenInstallation.id : null,
-        installUrl: GITHUB_APP_INSTALL_URL || null
+        installUrl: APP_INSTALL_URL || null
       }
     });
   } catch (error) {
@@ -593,8 +593,8 @@ app.post('/api/github/deploy', async (req, res) => {
     const installations = await getGitHubInstallationsFromToken(token);
     const chosenInstallation = pickInstallationForUser(installations, me.login);
     if (!chosenInstallation) {
-      const installHint = GITHUB_APP_INSTALL_URL
-        ? `Install the app first: ${GITHUB_APP_INSTALL_URL}`
+      const installHint = APP_INSTALL_URL
+        ? `Install the app first: ${APP_INSTALL_URL}`
         : 'Install the GitHub App for your account/repository and try again.';
       throw new Error(`GitHub App is not installed for this account. ${installHint}`);
     }
