@@ -594,7 +594,7 @@ Success: deployment live</pre>
           <li>Initial Deployment: pushes selected theme files to the freshly created repository.</li>
           <li>No Private Access: scoped token only for deployment workflow actions.</li>
         </ul>
-        <a class="btn btn-primary" id="ghConnectBtn" href="/auth/github/start?returnTo=/">Authorize GitHub</a>
+        <a class="btn btn-primary" id="ghConnectBtn" href="#">Authorize GitHub</a>
         <button class="btn btn-ghost" id="ghDisconnectBtn" type="button" hidden>Disconnect</button>
         <p class="auth-note" id="ghStatus">GitHub App not connected</p>
       </article>
@@ -738,6 +738,8 @@ Success: deployment live</pre>
     </footer>
   </main>
 
+  <script src="./config.js"></script>
+
   <script>
     window.addEventListener('load', function () {
       const loader = document.getElementById('loader-wrapper');
@@ -756,7 +758,8 @@ Success: deployment live</pre>
 
   <script>
     (async function () {
-      const REPO_URL = 'https://github.com/a0n0d8h/imarinzone.github.io';
+      const API_BASE = (window.CONFIG && window.CONFIG.apiBase) ? window.CONFIG.apiBase : 'https://op-bot-mauve.vercel.app';
+      const REPO_URL = 'https://github.com/oneclick-portfolio/op.github.io';
       const ghStatus = document.getElementById('ghStatus');
       const ghConnectBtn = document.getElementById('ghConnectBtn');
       const heroConnectBtn = document.getElementById('heroConnectBtn');
@@ -787,6 +790,30 @@ Success: deployment live</pre>
       let validatedResumeData = null;
 
       viewRepoLink.href = REPO_URL;
+      setConnectTargets(authStartUrl(), 'Authorize GitHub');
+
+      function apiUrl(path) {
+        return API_BASE + path;
+      }
+
+      function authStartUrl() {
+        const returnTo = window.location.origin + window.location.pathname;
+        return apiUrl('/auth/github/start?returnTo=' + encodeURIComponent(returnTo));
+      }
+
+      function getApiErrorMessage(payload, fallback) {
+        if (!payload) return fallback;
+        if (payload.error && typeof payload.error === 'object' && payload.error.message) {
+          return payload.error.message;
+        }
+        if (typeof payload.error === 'string') {
+          return payload.error;
+        }
+        if (typeof payload.message === 'string') {
+          return payload.message;
+        }
+        return fallback;
+      }
 
       function setResumeStatus(text, isError) {
         resumeUploadStatus.textContent = text;
@@ -869,10 +896,10 @@ Success: deployment live</pre>
           const raw = await file.text();
           const parsed = JSON.parse(raw);
 
-          const response = await fetch('/api/resume/validate', {
+          const response = await fetch(apiUrl('/api/resume/validate'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
+            credentials: 'include',
             body: JSON.stringify({ resumeData: parsed })
           });
 
@@ -880,7 +907,7 @@ Success: deployment live</pre>
           if (!response.ok || !payload.valid) {
             const details = payload && payload.errors && payload.errors.length
               ? payload.errors.slice(0, 3).join('; ')
-              : 'Schema validation failed.';
+              : getApiErrorMessage(payload, 'Schema validation failed.');
             throw new Error(details);
           }
 
@@ -904,7 +931,7 @@ Success: deployment live</pre>
       });
 
       heroConnectBtn.addEventListener('click', () => {
-        const href = heroConnectBtn.getAttribute('data-href') || '/auth/github/start?returnTo=/';
+        const href = heroConnectBtn.getAttribute('data-href') || authStartUrl();
         window.location.href = href;
       });
 
@@ -923,14 +950,14 @@ Success: deployment live</pre>
 
       async function updateAuthStatus() {
         try {
-          const response = await fetch('/api/github/me', { credentials: 'same-origin' });
+          const response = await fetch(apiUrl('/api/github/me'), { credentials: 'include' });
           if (!response.ok) {
             isAuthed = false;
             setStatus('GitHub App not connected');
             authStatusTitle.textContent = 'Authorize Deployment Access';
             ghConnectBtn.hidden = false;
             ghDisconnectBtn.hidden = true;
-            setConnectTargets('/auth/github/start?returnTo=/', 'Authorize GitHub');
+            setConnectTargets(authStartUrl(), 'Authorize GitHub');
             setStep(1);
             return null;
           }
@@ -943,7 +970,7 @@ Success: deployment live</pre>
             setStatus('GitHub App not connected');
             ghConnectBtn.hidden = false;
             ghDisconnectBtn.hidden = true;
-            setConnectTargets('/auth/github/start?returnTo=/', 'Authorize GitHub');
+            setConnectTargets(authStartUrl(), 'Authorize GitHub');
             setStep(1);
             return null;
           }
@@ -955,7 +982,7 @@ Success: deployment live</pre>
             authStatusTitle.textContent = 'Install GitHub App';
             ghConnectBtn.hidden = false;
             ghDisconnectBtn.hidden = false;
-            setConnectTargets(installUrl || '/auth/github/start?returnTo=/', installUrl ? 'Install GitHub App' : 'Authorize GitHub');
+            setConnectTargets(installUrl || authStartUrl(), installUrl ? 'Install GitHub App' : 'Authorize GitHub');
             setStep(1);
             return payload.user;
           }
@@ -965,7 +992,7 @@ Success: deployment live</pre>
           authStatusTitle.textContent = 'Connected and Ready';
           ghConnectBtn.hidden = true;
           ghDisconnectBtn.hidden = false;
-          setConnectTargets('/auth/github/start?returnTo=/', 'Connected');
+          setConnectTargets(authStartUrl(), 'Connected');
           if (currentStep === 1) setStep(2);
           setDeployEnabled(currentStep === 4);
           return payload.user;
@@ -973,6 +1000,7 @@ Success: deployment live</pre>
           isAuthed = false;
           console.error(error);
           setStatus('GitHub App status unavailable');
+          setConnectTargets(authStartUrl(), 'Authorize GitHub');
           setStep(1);
           return null;
         }
@@ -1003,10 +1031,10 @@ Success: deployment live</pre>
         hideDeployResult();
 
         try {
-          const response = await fetch('/api/github/deploy', {
+          const response = await fetch(apiUrl('/api/github/deploy'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
+            credentials: 'include',
             body: JSON.stringify({
               theme: theme,
               repositoryName: repositoryName,
@@ -1016,7 +1044,7 @@ Success: deployment live</pre>
 
           const payload = await response.json();
           if (!response.ok) {
-            throw new Error((payload && payload.error) || 'Deployment failed');
+            throw new Error(getApiErrorMessage(payload, 'Deployment failed'));
           }
 
           setStatus('Deployed to ' + payload.pagesUrl);
@@ -1036,7 +1064,7 @@ Success: deployment live</pre>
 
       ghDisconnectBtn.addEventListener('click', async () => {
         try {
-          await fetch('/api/github/logout', { method: 'POST', credentials: 'same-origin' });
+          await fetch(apiUrl('/api/github/logout'), { method: 'POST', credentials: 'include' });
         } finally {
           await updateAuthStatus();
           hideDeployResult();

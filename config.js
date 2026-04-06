@@ -1,4 +1,6 @@
 const CONFIG = {
+  // apiBase: 'https://op-bot-mauve.vercel.app',
+  apiBase: 'http://localhost:8080',
   paths: {
     resumeData: '/resume/Reactive Resume.json',
     profileArt: '/src/profile.html',
