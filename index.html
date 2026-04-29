@@ -1961,6 +1961,7 @@
       const importSection = document.getElementById('import-data');
       const themeSection = document.getElementById('theme-step');
       const deploymentSection = document.getElementById('deployment');
+      const DEMO_MODE = Boolean(window.CONFIG && window.CONFIG.demoMode);
       const preStepsContent = document.getElementById('preStepsContent');
       const focusStepsBtn = document.getElementById('focusStepsBtn');
       const topbarGetStartedBtn = document.getElementById('topbarGetStartedBtn');
@@ -2350,6 +2351,7 @@
       }
 
       function focusOnSteps() {
+        if (DEMO_MODE) return;
         hasStartedFlow = true;
         if (preStepsContent) preStepsContent.hidden = true;
         setStep(1);
@@ -2359,6 +2361,13 @@
       }
 
       function exitFlowAndNavigateTo(sectionId) {
+        if (DEMO_MODE) {
+          const targetSection = document.getElementById(sectionId);
+          if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          return;
+        }
         // Exit the step flow
         hasStartedFlow = false;
         if (preStepsContent) preStepsContent.hidden = false;
@@ -2435,6 +2444,18 @@
           return;
         }
 
+        if (DEMO_MODE) {
+          try {
+            const raw = await file.text();
+            validatedResumeData = JSON.parse(raw);
+            setResumeStatus('demo mode: file accepted without validation.', false);
+          } catch (error) {
+            validatedResumeData = {};
+            setResumeStatus('demo mode: invalid JSON accepted for visual preview.', false);
+          }
+          return;
+        }
+
         validateResumeBtn.disabled = true;
         setResumeStatus('Validating resume JSON...', false);
 
@@ -2471,6 +2492,12 @@
         const file = resumePdfFileInput.files && resumePdfFileInput.files[0];
         if (!file) {
           window.alert('Please choose a PDF file first.');
+          return;
+        }
+
+        if (DEMO_MODE) {
+          validatedResumeData = {};
+          setPdfStatus('demo mode: parse skipped for visual preview.', false);
           return;
         }
 
@@ -2610,6 +2637,11 @@
       }
 
       async function deploySelectedTheme() {
+        if (DEMO_MODE) {
+          window.alert('demo mode is enabled. Deployment is disabled.');
+          return;
+        }
+
         if (!isAuthed || currentStep !== 4) {
           window.alert('Complete previous steps first.');
           return;
@@ -2709,6 +2741,31 @@
       });
 
       consumeOAuthSessionFromHash();
+
+      if (DEMO_MODE) {
+        hasStartedFlow = true;
+        isAuthed = true;
+        validatedResumeData = {};
+        if (preStepsContent) preStepsContent.hidden = false;
+        stepSections.forEach((section) => {
+          section.hidden = false;
+        });
+        const indicator = document.getElementById('step-indicator');
+        if (indicator) indicator.hidden = true;
+        setStatus('demo mode: all sections visible and validation checks bypassed.');
+        authStatusTitle.textContent = 'demo Mode';
+        setAuthFlowState(true, true);
+        ghConnectBtn.hidden = true;
+        ghDisconnectBtn.hidden = true;
+        if (authContinueBtn) authContinueBtn.hidden = true;
+        if (topbarDisconnectBtn) topbarDisconnectBtn.hidden = true;
+        setResumeStatus('demo mode active.', false);
+        setPdfStatus('demo mode active.', false);
+        hideDeployResult();
+        resetDeployProgress();
+        isInitialized = true;
+        return;
+      }
 
       if (justReturnedFromOAuth) {
         hasStartedFlow = true;
