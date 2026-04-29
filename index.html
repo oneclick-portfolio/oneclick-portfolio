@@ -1878,56 +1878,8 @@
       const ghStatus = document.getElementById('ghStatus');
       const ghConnectBtn = document.getElementById('ghConnectBtn');
 
-      // Cookie warning banner state
-      const cookieWarningBanner = document.getElementById('cookie-warning-banner');
-      const cookieWarningTitle = document.getElementById('cookie-warning-title');
-      const cookieWarningText = document.getElementById('cookie-warning-text');
-      const cookieWarningReload = document.getElementById('cookie-warning-reload');
-      const cookieWarningDismiss = document.getElementById('cookie-warning-dismiss');
-      const OAUTH_ATTEMPT_KEY = 'ocpf-oauth-attempted';
-      let justReturnedFromOAuth = window.location.search.indexOf('connected=1') !== -1 || localStorage.getItem(OAUTH_ATTEMPT_KEY) === 'true';
-      const COOKIE_DISMISS_KEY = 'ocpf-cookie-warning-dismissed';
-
-      // Show/hide cookie warning banner
-      function maybeShowCookieBanner() {
-        if (!cookieWarningBanner) return;
-
-        // Only show if we just returned from OAuth AND auth failed (isAuthed = false)
-        if (!justReturnedFromOAuth) return;
-
-        const isDismissed = localStorage.getItem(COOKIE_DISMISS_KEY) === 'true';
-        if (isDismissed) return;
-
-        cookieWarningTitle.textContent = 'Cookies are blocked';
-        cookieWarningText.textContent = 'Your browser is blocking cross-site cookies needed for authentication. Please enable third-party cookies for this site in your browser settings, then reload.';
-
-        cookieWarningBanner.hidden = false;
-      }
-
-      function hideCookieBanner() {
-        if (cookieWarningBanner) {
-          cookieWarningBanner.hidden = true;
-        }
-        // Clear the OAuth flag so banner doesn't show on subsequent page loads
-        justReturnedFromOAuth = false;
-        localStorage.removeItem(OAUTH_ATTEMPT_KEY);
-      }
-
-      if (cookieWarningReload) {
-        cookieWarningReload.addEventListener('click', () => {
-          // Clear dismissal so banner re-appears if auth still fails
-          localStorage.removeItem(COOKIE_DISMISS_KEY);
-          window.location.reload();
-        });
-      }
-
-      if (cookieWarningDismiss) {
-        cookieWarningDismiss.addEventListener('click', () => {
-          // Dismiss for this session, but will resurface after a new OAuth attempt
-          localStorage.setItem(COOKIE_DISMISS_KEY, 'true');
-          hideCookieBanner();
-        });
-      }
+      const AUTH_SESSION_KEY = 'ocpf-auth-session-key';
+      let justReturnedFromOAuth = window.location.search.indexOf('connected=1') !== -1;
 
       const ghDisconnectBtn = document.getElementById('ghDisconnectBtn');
       const authContinueBtn = document.getElementById('authContinueBtn');
@@ -2056,9 +2008,80 @@
         if (label) ghConnectBtn.textContent = label;
       }
 
+      function getSessionKey() {
+        try {
+          return sessionStorage.getItem(AUTH_SESSION_KEY) || '';
+        } catch (error) {
+          console.warn('Session storage unavailable while reading auth session key.', error);
+          return '';
+        }
+      }
+
+      function setSessionKey(key) {
+        if (!key) return;
+        try {
+          sessionStorage.setItem(AUTH_SESSION_KEY, key);
+        } catch (error) {
+          console.warn('Session storage unavailable while persisting auth session key.', error);
+        }
+      }
+
+      function clearSessionKey() {
+        try {
+          sessionStorage.removeItem(AUTH_SESSION_KEY);
+        } catch (error) {
+          console.warn('Session storage unavailable while clearing auth session key.', error);
+        }
+      }
+
+      function authHeaders(baseHeaders) {
+        const headers = Object.assign({}, baseHeaders || {});
+        const sessionKey = getSessionKey();
+        if (sessionKey) {
+          headers.Authorization = 'Bearer ' + sessionKey;
+        }
+        return headers;
+      }
+
+      function apiFetch(path, options) {
+        const opts = Object.assign({}, options || {});
+        opts.headers = authHeaders(opts.headers);
+        return fetch(apiUrl(path), opts);
+      }
+
+      function consumeOAuthSessionFromHash() {
+        const hash = window.location.hash ? window.location.hash.substring(1) : '';
+        const hashParams = new URLSearchParams(hash || '');
+        const searchParams = new URLSearchParams(window.location.search || '');
+        const sessionKey = hashParams.get('session_key') || searchParams.get('session_key');
+        if (sessionKey) {
+          setSessionKey(sessionKey);
+          justReturnedFromOAuth = true;
+        }
+      }
+
+      function clearOAuthRedirectArtifacts() {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('connected')) {
+          url.searchParams.delete('connected');
+        }
+        if (url.searchParams.has('session_key')) {
+          url.searchParams.delete('session_key');
+        }
+
+        const hashParams = new URLSearchParams(url.hash ? url.hash.substring(1) : '');
+        if (hashParams.has('session_key')) {
+          hashParams.delete('session_key');
+          const nextHash = hashParams.toString();
+          url.hash = nextHash ? ('#' + nextHash) : '';
+        }
+
+        const cleaned = url.pathname + (url.search ? url.search : '') + (url.hash ? url.hash : '');
+        window.history.replaceState({}, document.title, cleaned);
+      }
+
       function markOAuthAttempt() {
-        localStorage.setItem(OAUTH_ATTEMPT_KEY, 'true');
-        localStorage.removeItem(COOKIE_DISMISS_KEY);
+        // no-op: bearer session flow does not rely on third-party cookies
       }
 
       function setAuthFlowState(loginDone, installDone) {
@@ -2200,10 +2223,9 @@
           const raw = await file.text();
           const parsed = JSON.parse(raw);
 
-          const response = await fetch(apiUrl('/api/resume/validate'), {
+          const response = await apiFetch('/api/resume/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ resumeData: parsed })
           });
 
@@ -2240,9 +2262,8 @@
           const formData = new FormData();
           formData.append('file', file);
 
-          const response = await fetch(apiUrl('/api/resume/parse'), {
+          const response = await apiFetch('/api/resume/parse', {
             method: 'POST',
-            credentials: 'include',
             body: formData
           });
 
@@ -2294,9 +2315,10 @@
         if (authContinueBtn) authContinueBtn.hidden = true;
         if (topbarDisconnectBtn) topbarDisconnectBtn.hidden = true;
         try {
-          const response = await fetch(apiUrl('/api/github/me'), { credentials: 'include' });
+          const response = await apiFetch('/api/github/me');
           if (!response.ok) {
             isAuthed = false;
+            clearSessionKey();
             setStatus('Pending: GitHub login and app installation.');
             authStatusTitle.textContent = 'Step 1: Log in with GitHub';
             ghConnectBtn.hidden = false;
@@ -2305,10 +2327,6 @@
             setConnectTargets(authStartUrl(), 'Log in with GitHub');
             setAuthFlowState(false, false);
             setStep(1);
-            // Show cookie warning if we just returned from OAuth
-            if (justReturnedFromOAuth) {
-              maybeShowCookieBanner();
-            }
             return null;
           }
 
@@ -2342,8 +2360,6 @@
           }
 
           isAuthed = true;
-          // Hide cookie banner on successful auth
-          hideCookieBanner();
           const repoSelection = payload && payload.githubApp && payload.githubApp.repositorySelection;
           if (repoSelection === 'selected') {
             setStatus('Connected as @' + login + ' — App installed for select repos only. New repo creation may fail.');
@@ -2369,10 +2385,7 @@
           setAuthFlowState(false, false);
           ghDisconnectBtn.hidden = true;
           setStep(1);
-          // Show cookie warning on network/auth error if we just returned from OAuth
-          if (justReturnedFromOAuth) {
-            maybeShowCookieBanner();
-          }
+          clearSessionKey();
           return null;
         }
       }
@@ -2412,10 +2425,9 @@
         hideDeployResult();
 
         try {
-          const response = await fetch(apiUrl('/api/github/deploy'), {
+          const response = await apiFetch('/api/github/deploy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({
               theme: theme,
               repositoryName: repositoryName,
@@ -2447,13 +2459,12 @@
       document.querySelectorAll('.disconnect-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           try {
-            await fetch(apiUrl('/api/github/logout'), { method: 'POST', credentials: 'include' });
+            await apiFetch('/api/github/logout', { method: 'POST' });
           } catch (error) {
             console.error('Logout error:', error);
           } finally {
             // Clear session and local state
-            localStorage.removeItem(COOKIE_DISMISS_KEY);
-            localStorage.removeItem(OAUTH_ATTEMPT_KEY);
+            clearSessionKey();
             validatedResumeData = null;
             await updateAuthStatus();
             hideDeployResult();
@@ -2462,14 +2473,13 @@
         });
       });
 
+      consumeOAuthSessionFromHash();
+
       if (justReturnedFromOAuth) {
         hasStartedFlow = true;
         if (preStepsContent) preStepsContent.hidden = true;
         setStatus('GitHub connected. Continue to step 2.');
-        // Clear dismissal flag when a new OAuth attempt is made
-        localStorage.removeItem(COOKIE_DISMISS_KEY);
-        localStorage.removeItem(OAUTH_ATTEMPT_KEY);
-        window.history.replaceState({}, document.title, window.location.pathname);
+        clearOAuthRedirectArtifacts();
       }
 
       syncRepoNameFromTheme();
