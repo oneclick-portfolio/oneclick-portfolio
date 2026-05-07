@@ -5,6 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0a0a0a" />
+  <meta name="description" content="Deploy your developer portfolio in seconds. Connect GitHub, upload your resume, choose a theme — no code required." />
   <title>One-Click Portfolio</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -12,21 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-  <!-- Matter font fallback: using system fonts with geometric sans-serif -->
-  <style>
-    @font-face {
-      font-family: 'Matter';
-      src: url('https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1/assets/fonts/Phosphor-Regular.ttf') format('truetype');
-      font-weight: 400;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: 'Matter';
-      src: url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap');
-      font-weight: 500;
-      font-display: swap;
-    }
-  </style>
+
   <style>
     :root {
       --background: #0a0a0a;
@@ -59,6 +46,12 @@
       --error: #ffb4ab;
       --radius: 0.75rem;
       --section-gap: 120px;
+    }
+
+    @media (max-width: 768px) {
+      :root {
+        --section-gap: 64px;
+      }
     }
 
     [hidden] {
@@ -1660,11 +1653,37 @@
         min-width: 16px;
       }
     }
+
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 0;
+      background: var(--warm-parchment);
+      color: var(--deep-void);
+      padding: 8px 16px;
+      z-index: 10000;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 0 0 0.5rem 0;
+      transition: top 0.2s;
+    }
+    .skip-link:focus {
+      top: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
   <link rel="stylesheet" href="dark_patch.css" />
 </head>
 
 <body class="is-loading">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <div id="cookie-warning-banner" class="cookie-warning-banner" hidden role="alert" aria-live="assertive">
     <div class="cookie-warning-content">
       <h3 id="cookie-warning-title">Third-party cookies are blocked</h3>
@@ -1695,9 +1714,9 @@
         <span id="brandName">One-Click Portfolio</span>
       </a>
       <nav class="topnav" aria-label="Primary">
-        <button class="chip" id="topbarHowItWorksBtn" type="button" style="cursor: pointer;">How it Works</button>
-        <button class="chip" id="topbarThemesBtn" type="button" style="cursor: pointer;">Themes</button>
-        <button class="chip" id="topbarGetStartedBtn" type="button" style="cursor: pointer;">Get Started</button>
+        <a class="chip" id="topbarHowItWorksBtn" href="#how-it-works">How it Works</a>
+        <a class="chip" id="topbarThemesBtn" href="#theme-showcase">Themes</a>
+        <a class="chip" id="topbarGetStartedBtn" href="#auth">Get Started</a>
         <a class="chip" href="https://github.com/oneclick-portfolio/oneclick-portfolio.github.io" target="_blank"
           rel="noopener">GitHub
           Repository</a>
@@ -1714,7 +1733,7 @@
         <h1 id="heroName">Deploy your developer portfolio in seconds.</h1>
         <p>Grounded in simplicity. Connect your GitHub, upload your resume, choose a theme, and let us handle the rest. No configuration required.</p>
         <div class="hero-actions">
-          <button class="btn" id="topbarGetStartedBtn2" type="button" style="padding:14px 32px; border-radius:9999px;">Get Started</button>
+          <button class="btn" id="heroGetStartedBtn" type="button" style="padding:14px 32px; border-radius:9999px;">Get Started</button>
           <button class="btn btn-ghost" id="viewExamplesBtn" type="button" style="padding:14px 32px; color:var(--warm-parchment);">View Examples</button>
         </div>
       </div>
@@ -1838,6 +1857,7 @@
           <span class="tag" style="background: #e0f2fe; color: #0369a1; margin-bottom: 12px;">AI Beta</span>
           <h3 style="margin-top: 8px;">AI Resume Parser</h3>
           <p>Upload your PDF resume and let Gemini structure it for you automatically.</p>
+          <label for="resumePdfFile" style="font-size:14px; font-weight:500; color:var(--stone-gray);">Upload your PDF resume</label>
           <input class="field" id="resumePdfFile" type="file" accept="application/pdf" />
           <button class="btn btn-primary" id="parsePdfBtn" type="button" style="width: 100%;">Parse with AI</button>
           <p class="upload-status" id="pdfParseStatus">No PDF parsed yet.</p>
@@ -1849,6 +1869,7 @@
             <p><button class="btn btn-ghost" id="jsonHowBtn" type="button" style="flex: 0 0 auto;">How?</button></p>
           </div>
           <p>Upload your exported resume JSON. We validate it against the official schema.</p>
+          <label for="resumeJsonFile" style="font-size:14px; font-weight:500; color:var(--stone-gray);">Upload your rxresu.me JSON</label>
           <input class="field" id="resumeJsonFile" type="file" accept="application/json" />
           <button class="btn btn-primary" id="validateResumeBtn" type="button" style="width: 100%;">Validate</button>
           <p class="upload-status" id="resumeUploadStatus">No JSON validated yet.</p>
@@ -2037,7 +2058,7 @@
 
     <footer class="footer" style="margin-top:128px; padding:80px 0;">
       <span>© 2026 One-Click Portfolio. Grounded in simplicity.</span>
-      <nav style="display:flex; gap:24px;">
+      <nav aria-label="Footer" style="display:flex; gap:24px;">
         <a href="#privacy" style="color:var(--stone-gray); transition:color 0.3s;">Privacy</a>
         <a href="#terms" style="color:var(--stone-gray); transition:color 0.3s;">Terms</a>
         <a href="#support" style="color:var(--stone-gray); transition:color 0.3s;">Support</a>
@@ -2825,7 +2846,7 @@
       }
 
       function normalizePagesUrl(pagesUrl) {
-        return String(pagesUrl || '').replace(/\/+$/, '') + '/';
+        return String(pagesUrl || '').replace(/^http:\/\//, 'https://').replace(/\/+$/, '') + '/';
       }
 
       function probeScriptUrl(pagesUrl) {
@@ -3083,11 +3104,11 @@
         focusStepsBtn.addEventListener('click', focusOnSteps);
       }
       if (topbarGetStartedBtn) {
-        topbarGetStartedBtn.addEventListener('click', focusOnSteps);
+        topbarGetStartedBtn.addEventListener('click', (e) => { e.preventDefault(); focusOnSteps(); });
       }
-      const topbarGetStartedBtn2 = document.getElementById('topbarGetStartedBtn2');
-      if (topbarGetStartedBtn2) {
-        topbarGetStartedBtn2.addEventListener('click', focusOnSteps);
+      const heroGetStartedBtn = document.getElementById('heroGetStartedBtn');
+      if (heroGetStartedBtn) {
+        heroGetStartedBtn.addEventListener('click', focusOnSteps);
       }
 
       const viewExamplesBtn = document.getElementById('viewExamplesBtn');
@@ -3098,7 +3119,7 @@
       }
 
       if (topbarHowItWorksBtn) {
-        topbarHowItWorksBtn.addEventListener('click', () => exitFlowAndNavigateTo('how-it-works'));
+        topbarHowItWorksBtn.addEventListener('click', (e) => { e.preventDefault(); exitFlowAndNavigateTo('how-it-works'); });
       }
 
       if (jsonHowBtn && jsonHowPanel) {
@@ -3109,7 +3130,7 @@
       }
 
       if (topbarThemesBtn) {
-        topbarThemesBtn.addEventListener('click', () => exitFlowAndNavigateTo('theme-showcase'));
+        topbarThemesBtn.addEventListener('click', (e) => { e.preventDefault(); exitFlowAndNavigateTo('theme-showcase'); });
       }
 
       if (authContinueBtn) {

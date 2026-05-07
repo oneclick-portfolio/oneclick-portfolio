@@ -5,3 +5,4 @@ node_modules/*
 stitch_exports/*
 .github/*.md
 stitch_assets/*
+.github/agents/*
