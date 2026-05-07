@@ -266,14 +266,15 @@
     }
 
     .btn-primary {
-      background: var(--earth-gray);
-      color: var(--warm-parchment);
+      background: var(--warm-parchment);
+      color: var(--deep-void);
       border: none;
-      font-weight: 500;
+      font-weight: 600;
     }
     
     .btn-primary:hover {
-      background: var(--stone-gray);
+      background: var(--ash-gray);
+      color: var(--deep-void);
       opacity: 1;
     }
 
@@ -858,26 +859,6 @@
     .showcase-cta {
       text-align: center;
       padding: 24px 0;
-      animation: rise 0.4s ease both;
-    }
-    
-    .showcase-selection-status {
-      font-size: 16px;
-      color: var(--ash-gray);
-      margin: 16px 0;
-      opacity: 0;
-      animation: slideInUp 0.3s ease 0.1s forwards;
-    }
-    
-    @keyframes slideInUp {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
     }
 
     .theme-showcase .theme-card.is-neighbor {
@@ -1006,13 +987,14 @@
       transform: translateY(-2px);
     }
 
-    #themeStepGrid .theme-card input[type="radio"]:checked + .theme-body,
-    #themeStepGrid .theme-card.is-active {
+    #themeStepGrid .theme-card.is-active,
+    #themeStepGrid .theme-card input[type="radio"]:checked {
       border-color: var(--warm-parchment);
       box-shadow: 0 0 0 2px var(--frosted-veil);
     }
 
-    #themeStepGrid .theme-card.is-active .theme-name {
+    #themeStepGrid .theme-card.is-active .theme-name,
+    #themeStepGrid .theme-card input[type="radio"]:checked ~ .theme-body .theme-name {
       color: var(--warm-parchment);
     }
 
@@ -1799,11 +1781,8 @@
         </div>
         <div class="theme-showcase-dots" id="themeShowcaseDots" aria-label="Theme carousel pagination"></div>
       </div>
-      <div class="showcase-cta" id="showcaseCtaContainer" style="display:none;">
-        <p class="showcase-selection-status" id="showcaseSelectionStatus" style="text-align:center;margin-bottom:16px;color:var(--ash-gray);font-size:16px;">
-          <span id="selectedThemeName" style="font-weight:500;"></span> selected
-        </p>
-        <button class="btn btn-primary" id="focusStepsBtn" type="button">Continue to Setup →</button>
+      <div class="showcase-cta" id="showcaseCtaContainer">
+        <button class="btn btn-primary" id="focusStepsBtn" type="button">Get Started →</button>
       </div>
     </section>
     </div>
@@ -1860,7 +1839,7 @@
           <h3 style="margin-top: 8px;">AI Resume Parser</h3>
           <p>Upload your PDF resume and let Gemini structure it for you automatically.</p>
           <input class="field" id="resumePdfFile" type="file" accept="application/pdf" />
-          <button class="btn" id="parsePdfBtn" type="button" style="width: 100%;">Parse with AI</button>
+          <button class="btn btn-primary" id="parsePdfBtn" type="button" style="width: 100%;">Parse with AI</button>
           <p class="upload-status" id="pdfParseStatus">No PDF parsed yet.</p>
         </article>
         <div class="or-divider" aria-hidden="true">[OR]</div>
@@ -1871,7 +1850,7 @@
           </div>
           <p>Upload your exported resume JSON. We validate it against the official schema.</p>
           <input class="field" id="resumeJsonFile" type="file" accept="application/json" />
-          <button class="btn" id="validateResumeBtn" type="button" style="width: 100%;">Validate</button>
+          <button class="btn btn-primary" id="validateResumeBtn" type="button" style="width: 100%;">Validate</button>
           <p class="upload-status" id="resumeUploadStatus">No JSON validated yet.</p>
           
           <article class="panel" id="jsonHowPanel" style="margin-top: 16px; display: none; background: var(--surface-container); border: 1px solid var(--mist-border);">
@@ -1902,7 +1881,7 @@
           <p id="themeStepMetaSubtitle">Choose from editorial themes</p>
         </div>
         <div class="theme-grid" id="themeStepGrid" role="radiogroup" aria-label="Theme selection">
-          <p style="grid-column:1/-1;text-align:center;color:var(--on-surface-variant);font-size:14px;padding:40px 0;">Loading themes…</p>
+          <p id="themeLoadingMsg" style="grid-column:1/-1;text-align:center;color:var(--on-surface-variant);font-size:14px;padding:40px 0;">Loading themes…</p>
         </div>
       </div>
       <div class="step-nav" style="margin-top: 24px;">
@@ -2124,28 +2103,24 @@
       const showcaseThemeData = [];
 
       function updateShowcaseSelection(themeName, displayName, previewUrl) {
-        // Store selection in session storage
+        // Store selection in session storage (only called from Step 3 handlers)
         sessionStorage.setItem('selected-theme-name', themeName);
         sessionStorage.setItem('selected-theme-display', displayName);
         if (previewUrl) sessionStorage.setItem('selected-theme-preview', previewUrl);
         
-        // Update UI
-        const showcaseCtaContainer = document.getElementById('showcaseCtaContainer');
-        const selectedThemeName = document.getElementById('selectedThemeName');
+        // Update Step 3 UI elements only
         const themeStepDisplayName = document.getElementById('themeStepDisplayName');
         const themeStepPreview = document.getElementById('themeStepPreview');
         const themeStepName = document.getElementById('themeStepName');
         
-        if (selectedThemeName) selectedThemeName.textContent = displayName;
         if (themeStepDisplayName) themeStepDisplayName.textContent = displayName;
         if (themeStepName) themeStepName.textContent = displayName;
         if (themeStepPreview && previewUrl) {
           themeStepPreview.src = previewUrl;
           themeStepPreview.style.display = 'block';
         }
-        if (showcaseCtaContainer) showcaseCtaContainer.style.display = 'block';
         
-        // Update the main theme selection for deployment
+        // Update the main theme selection radio in Step 3 grid
         const themeGrid = document.getElementById('themeStepGrid');
         if (themeGrid) {
           const radio = themeGrid.querySelector('input[name="theme-step"][value="' + themeName + '"]')
@@ -2416,6 +2391,7 @@
           const radioInput = themeCard.querySelector('input[type="radio"]');
           themeCard.addEventListener('click', function() {
             radioInput.checked = true;
+            radioInput.dispatchEvent(new Event('change', { bubbles: true }));
             updateShowcaseSelection(name, displayName, screenshotUrl);
             updateThemeStepDisplay(displayName);
           });
@@ -2461,13 +2437,11 @@
 
       startShowcaseAuto();
 
-      // Initialize carousel selection state and restore previous selection if available
+      // Restore previous theme selection in Step 3 grid only
       (function() {
         const savedThemeName = sessionStorage.getItem('selected-theme-name');
         const savedThemeDisplay = sessionStorage.getItem('selected-theme-display');
-        const savedThemePreview = sessionStorage.getItem('selected-theme-preview');
         if (savedThemeName && savedThemeDisplay) {
-          // Restore in Step 3 grid if it's populated
           const themeStepGrid = document.getElementById('themeStepGrid');
           if (themeStepGrid) {
             const stepRadio = themeStepGrid.querySelector('input[type="radio"][value="' + savedThemeName + '"]');
@@ -2476,15 +2450,6 @@
               updateThemeStepDisplay(savedThemeDisplay);
             }
           }
-          // Also restore in showcase if available
-          if (showcaseGrid) {
-            const radio = showcaseGrid.querySelector('input[type="radio"][value="' + savedThemeName + '"]');
-            if (radio) {
-              radio.checked = true;
-            }
-          }
-          // Update deployment form
-          updateShowcaseSelection(savedThemeName, savedThemeDisplay, savedThemePreview);
         }
       })();
 
@@ -2628,12 +2593,14 @@
       }
 
       function selectedTheme() {
-        const checked = document.querySelector('#themeStepGrid input[name="theme-step"]:checked')
-          || document.querySelector('input[name="theme"]:checked');
+        // Use Step 3 DOM radio as primary source of truth
+        const checked = document.querySelector('#themeStepGrid input[name="theme-step"]:checked');
         if (checked) return checked.value;
-        // Fall back to first available radio (themes may still be loading)
-        const first = document.querySelector('#themeStepGrid input[name="theme-step"]')
-          || document.querySelector('input[name="theme"]');
+        // Fall back to sessionStorage (set only by Step 3 click handlers)
+        const storedTheme = sessionStorage.getItem('selected-theme-name');
+        if (storedTheme) return storedTheme;
+        // Fall back to first available radio
+        const first = document.querySelector('#themeStepGrid input[name="theme-step"]');
         return first ? first.value : '';
       }
 
@@ -2647,13 +2614,14 @@
       }
 
       function selectedThemeScreenshotUrl() {
-        const selectedCard = document.querySelector('#themeStepGrid input[name="theme-step"]:checked')
-          || document.querySelector('#themeStepGrid input[name="theme"]:checked');
+        // Check Step 3 DOM first for the checked radio's card image
+        const selectedCard = document.querySelector('#themeStepGrid input[name="theme-step"]:checked');
         if (selectedCard) {
           const card = selectedCard.closest('.theme-card');
           const image = card && card.querySelector('img');
           if (image && image.src) return image.src;
         }
+        // Fall back to sessionStorage (set only by Step 3 click handlers)
         return sessionStorage.getItem('selected-theme-preview') || '';
       }
 
@@ -3299,6 +3267,8 @@
       });
 
       themeContinueBtn.addEventListener('click', () => {
+        syncRepoNameFromTheme();
+        setDeployPreviewIdle();
         setStep(4);
       });
 
